@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NEET Exam Portal</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <!-- Chart.js for performance analysis -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Removed EmailJS SDK components as per request -->
+  <style>
+    /* Global Styles */
+    body {
+      background: linear-gradient(135deg, #74ABE2, #5563DE);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    /* Fixed nav bar at top */
+    nav {
+      background: #007BFF;
+      padding: 10px 20px;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+    /* Ensure main content starts below nav */
+    .main-content {
+      padding-top: 60px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    h2, h3 { text-align: center; color: #333; }
+    /* Landing Page */
+    #landing { text-align: center; margin-top: 100px; }
+    #landing button { padding: 10px 30px; margin: 10px; font-size: 1.1em; cursor: pointer; }
+    /* Login/Signup Windows */
+    .auth-window { display: none; }
+    .auth-window input {
+      width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .auth-window button { padding: 10px 15px; border: none; border-radius: 4px; background: #007BFF; color: #fff; cursor: pointer; }
+    .auth-window a { color: #007BFF; text-decoration: none; font-size: 0.9em; }
+    /* Nav Right (username and logout) */
+    .nav-right { position: relative; }
+    #accountMenu {
+      cursor: pointer;
+      padding: 5px;
+      display: inline-block;
+    }
+    /* Set a minimum width for accountName so it shows the actual username */
+    #accountName {
+      display: inline-block;
+      min-width: 80px;
+    }
+    #dropdownMenu {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-width: 120px;
+      z-index: 1001;
+    }
+    #dropdownMenu button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      color: #000;
+    }
+    #dropdownMenu button:hover { background: #fff; }
+    nav button { background: transparent; border: none; color: #fff; font-size: 1em; margin: 0 10px; cursor: pointer; }
+    nav button:hover { text-decoration: underline; }
+    /* Exam Styles */
+    /* The exam container uses flex so that the main exam area and sidebar are shown side by side */
+    #exam { display: none; }
+    #exam-main { flex: 1; padding-right: 10px; }
+    #exam-sidebar {
+      width: 150px;
+      padding: 10px;
+      border-left: 1px solid #ccc;
+      overflow-y: auto;
+      max-height: 500px;
+    }
+    .subject-group { margin-bottom: 20px; }
+    .subject-group h4 {
+      margin: 0 0 5px 0;
+      font-size: 1em;
+      text-align: center;
+    }
+    .question-box {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin: 2px;
+      border: 1px solid #999;
+      text-align: center;
+      line-height: 20px;
+      font-size: 0.8em;
+      cursor: pointer;
+      background-color: #f0f0f0;
+    }
+    /* Highlight active question box with a blue border */
+    .question-box.active {
+      border: 2px solid blue;
+    }
+    .question-number {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .question-text { margin: 10px 0; }
+    .option { margin: 8px 0; }
+    label { margin-left: 8px; }
+    #navigation { text-align: center; margin-top: 20px; }
+    #timer { font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 1.1em; }
+    /* Result & Performance */
+    .result-question { margin-bottom: 15px; }
+    .correct { color: green; font-weight: bold; }
+    .wrong { color: red; font-weight: bold; }
+    .unanswered { color: gray; font-weight: bold; }
+    hr { border: 0; border-top: 1px solid #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: center; }
+    tr:hover { background: #f1f1f1; cursor: pointer; }
+    tr.completed { background-color: #e8f5e9 !important; }
+    /* Password Strength Meter */
+    #strengthMeter { width: 100%; height: 10px; background: #ddd; border-radius: 5px; margin-top: 5px; }
+    #strengthBar { height: 100%; width: 0%; border-radius: 5px; transition: width 0.3s; }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <!-- Landing Page -->
+    <div id="landing" class="container">
+      <h2>Welcome to the NEET Exam Portal</h2>
+      <button id="landingLoginBtn">Login</button>
+      <button id="landingSignupBtn">Sign Up</button>
+    </div>
+
+    <!-- Login Window -->
+    <div id="loginWindow" class="container auth-window">
+      <h2>Login</h2>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <button id="googleLoginBtn">Login with Google</button>
+      </div>
+      <hr>
+      <p style="text-align:center;">Or login with username:</p>
+      <input type="text" id="loginUsername" placeholder="Username or Gmail" required>
+      <input type="password" id="loginPassword" placeholder="Password" required>
+      <div style="text-align:center;">
+        <button id="loginBtn">Login</button>
+      </div>
+      <p style="text-align:center;"><a href="#" id="backToLandingFromLogin">Back</a></p>
+    </div>
+
+    <!-- Signup Window -->
+    <div id="signupWindow" class="container auth-window">
+      <h2>Sign Up</h2>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <button id="googleSignupBtn">Sign up with Google</button>
+      </div>
+      <hr>
+      <p style="text-align:center;">Or sign up with username:</p>
+      <input type="text" id="signupUsername" placeholder="Choose a Username" required>
+      <input type="email" id="signupEmail" placeholder="Your Gmail" required>
+      <input type="password" id="signupPassword" placeholder="Choose a Password" required>
+      <input type="password" id="signupPasswordConfirm" placeholder="Confirm Password" required>
+      <div id="strengthMeter">
+        <div id="strengthBar"></div>
+      </div>
+      <div style="text-align:center; margin-top: 10px;">
+        <button id="signupBtn">Sign Up</button>
+      </div>
+      <p style="text-align:center;"><a href="#" id="backToLandingFromSignup">Back</a></p>
+    </div>
+
+    <!-- Main UI (After Login) -->
+    <div id="mainUI" style="display:none;">
+      <nav>
+        <div class="nav-left">
+          <button id="modelPapersTab">Model Papers</button>
+          <button id="performanceTab">Performance Analysis</button>
+        </div>
+        <div class="nav-right">
+          <div id="accountMenu">
+            <span id="accountName" style="font-weight: bold;">User</span>
+            <div id="dropdownMenu">
+              <button id="logoutBtn">Logout</button>
+            </div>
+          </div>
+        </div>
+      </nav>
+      
+      <!-- Model Papers Section -->
+      <div id="modelPapers" class="container" style="display:none;">
+        <h2>Model Papers</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Paper ID</th>
+              <th>Status</th>
+              <th>Highest Marks</th>
+            </tr>
+          </thead>
+          <tbody id="papersTableBody">
+            <!-- Model paper rows will be inserted here -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Performance Analysis Section -->
+      <div id="performance" class="container" style="display:none;">
+        <h2>Performance Analysis</h2>
+        <canvas id="performanceChart" width="400" height="200"></canvas>
+        <h3>Suggestions</h3>
+        <div id="suggestions">
+          <!-- Suggestions based on exam performance will appear here -->
+        </div>
+      </div>
+      
+      <!-- Exam Interface -->
+      <div id="exam" class="container" style="display:none;">
+        <div id="exam-main">
+          <div id="timer"></div>
+          <div id="question-container"></div>
+          <div id="navigation" style="text-align:center;">
+            <button id="prevBtn" style="display:none;">Previous</button>
+            <button id="nextBtn">Next</button>
+            <button id="submitBtn">Submit Exam</button>
+          </div>
+        </div>
+        <div id="exam-sidebar">
+          <!-- Sidebar with subject question boxes will be generated here -->
+        </div>
+      </div>
+      
+      <!-- Result Page -->
+      <div id="result" class="container" style="display:none;"></div>
+    </div>
+  </div>
+  
+  <script>
+    // -------------------------------
+    // Firebase Configuration – replace with your own values
+    // -------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyAUNfNUXwj4Ik7BeubVRGKTkzdiq21gWS8",
+      authDomain: "neet-d0b2b.firebaseapp.com",
+      projectId: "neet-d0b2b",
+      storageBucket: "neet-d0b2b.firebasestorage.app",
+      messagingSenderId: "38447232972",
+      appId: "1:38447232972:web:355f38d697aace44f54f69",
+      measurementId: "G-J8HJR69H3Q"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    var provider = new firebase.auth.GoogleAuthProvider();
+    
+    // Global flag to indicate if exam is submitted
+    var examSubmitted = false;
+    
+    // Check persistent login on page load
+    window.onload = function() {
+      if(localStorage.getItem("loggedInUser")) {
+        showMainUI();
+      }
+    };
+    
+    // -------------------------------
+    // Landing & Navigation between Auth Windows
+    // -------------------------------
+    document.getElementById("landingLoginBtn").addEventListener("click", function(){
+      document.getElementById("landing").style.display = "none";
+      document.getElementById("loginWindow").style.display = "block";
+    });
+    document.getElementById("landingSignupBtn").addEventListener("click", function(){
+      document.getElementById("landing").style.display = "none";
+      document.getElementById("signupWindow").style.display = "block";
+    });
+    document.getElementById("backToLandingFromLogin").addEventListener("click", function(){
+      document.getElementById("loginWindow").style.display = "none";
+      document.getElementById("landing").style.display = "block";
+    });
+    document.getElementById("backToLandingFromSignup").addEventListener("click", function(){
+      document.getElementById("signupWindow").style.display = "none";
+      document.getElementById("landing").style.display = "block";
+    });
+    
+    // Toggle dropdown for account menu
+    document.getElementById("accountMenu").addEventListener("click", function(){
+      var dropdown = document.getElementById("dropdownMenu");
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+    
+    // -------------------------------
+    // Google Authentication Functions
+    // -------------------------------
+    function googleSignup() {
+      firebase.auth().signInWithPopup(provider)
+        .then(function(result) {
+          var user = result.user;
+          db.collection("users").doc(user.email).get().then(function(doc) {
+            if (doc.exists) {
+              alert("This account is already registered. Redirecting to login.");
+              document.getElementById("signupWindow").style.display = "none";
+              document.getElementById("loginWindow").style.display = "block";
+            } else {
+              db.collection("users").doc(user.email).set({
+                username: user.displayName,
+                email: user.email,
+                papers: []
+              }).then(function() {
+                alert("Signup successful! Please login.");
+                document.getElementById("signupWindow").style.display = "none";
+                document.getElementById("loginWindow").style.display = "block";
+              }).catch(function(error) {
+                console.error("Error writing document: ", error);
+                alert("Error saving user data: " + error.message);
+              });
+            }
+          });
+        })
+        .catch(function(error) {
+          console.error("Google signup error:", error);
+          alert("Google signup failed: " + error.message);
+        });
+    }
+    
+    function googleLogin() {
+      firebase.auth().signInWithPopup(provider)
+        .then(function(result) {
+          var user = result.user;
+          db.collection("users").doc(user.email).get().then(function(doc) {
+            if (!doc.exists) {
+              alert("This account is not registered. Please sign up first.");
+            } else {
+              localStorage.setItem("loggedInUser", user.email);
+              var name = doc.data().username || "User";
+              document.getElementById("accountName").innerText = name;
+              showMainUI();
+            }
+          });
+        })
+        .catch(function(error) {
+          console.error("Google login error:", error);
+          alert("Google login failed: " + error.message);
+        });
+    }
+    
+    document.getElementById("googleSignupBtn").addEventListener("click", googleSignup);
+    document.getElementById("googleLoginBtn").addEventListener("click", googleLogin);
+    
+    // -------------------------------
+    // Username-based Login/Signup using Firestore
+    // -------------------------------
+    document.getElementById("signupBtn").addEventListener("click", function(){
+      var username = document.getElementById("signupUsername").value.trim();
+      var email = document.getElementById("signupEmail").value.trim();
+      var password = document.getElementById("signupPassword").value;
+      var passwordConfirm = document.getElementById("signupPasswordConfirm").value;
+      if (!username || !email || !password || !passwordConfirm) {
+        alert("Please fill in all fields.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        alert("Passwords do not match.");
+        return;
+      }
+      if (password.length < 6) {
+        alert("Password too weak. It must be at least 6 characters long.");
+        return;
+      }
+      db.collection("users").doc(email).get().then(function(doc) {
+        if (doc.exists) {
+          alert("An account with this Gmail already exists. Redirecting to login.");
+          document.getElementById("signupWindow").style.display = "none";
+          document.getElementById("loginWindow").style.display = "block";
+        } else {
+          db.collection("users").doc(email).set({
+            username: username,
+            email: email,
+            password: password, // In production, never store passwords as plain text.
+            papers: []
+          }).then(function() {
+            alert("Signup successful! Please log in.");
+            document.getElementById("signupWindow").style.display = "none";
+            document.getElementById("loginWindow").style.display = "block";
+          }).catch(function(error) {
+            alert("Error during signup: " + error.message);
+          });
+        }
+      });
+    });
+    
+    document.getElementById("loginBtn").addEventListener("click", function(){
+      var usernameOrEmail = document.getElementById("loginUsername").value.trim();
+      var password = document.getElementById("loginPassword").value;
+      if (!usernameOrEmail || !password) {
+        alert("Please fill in both username/email and password.");
+        return;
+      }
+      db.collection("users").doc(usernameOrEmail).get().then(function(doc) {
+        if (doc.exists) {
+          var data = doc.data();
+          if (data.password !== password) {
+            alert("Invalid username/email or password.");
+          } else {
+            localStorage.setItem("loggedInUser", doc.id);
+            var name = data.username || "User";
+            document.getElementById("accountName").innerText = name;
+            showMainUI();
+          }
+        } else {
+          db.collection("users").where("username", "==", usernameOrEmail).get().then(function(querySnapshot) {
+            if (querySnapshot.empty) {
+              alert("Invalid username/email or password.");
+            } else {
+              var userDoc = querySnapshot.docs[0];
+              var data = userDoc.data();
+              if (data.password !== password) {
+                alert("Invalid username/email or password.");
+              } else {
+                localStorage.setItem("loggedInUser", userDoc.id);
+                var name = data.username || "User";
+                document.getElementById("accountName").innerText = name;
+                showMainUI();
+              }
+            }
+          });
+        }
+      });
+    });
+    
+    // Logout functionality – manual logout only clears login
+    document.getElementById("logoutBtn").addEventListener("click", function(){
+      localStorage.removeItem("loggedInUser");
+      firebase.auth().signOut().then(function() {
+        location.reload();
+      }).catch(function(error) {
+        console.error("Error during sign out:", error);
+      });
+    });
+    
+    // -------------------------------
+    // Password Strength Checker
+    // -------------------------------
+    var signupPassword = document.getElementById("signupPassword");
+    var strengthBar = document.getElementById("strengthBar");
+    signupPassword.addEventListener("input", function(){
+      var val = signupPassword.value;
+      var strength = 0;
+      if(val.length >= 6) strength += 1;
+      if(val.match(/[A-Z]/)) strength += 1;
+      if(val.match(/[0-9]/)) strength += 1;
+      if(val.match(/[^a-zA-Z0-9]/)) strength += 1;
+      var percent = (strength / 4) * 100;
+      strengthBar.style.width = percent + "%";
+      if(percent < 50) {
+        strengthBar.style.background = "red";
+      } else if(percent < 75) {
+        strengthBar.style.background = "orange";
+      } else {
+        strengthBar.style.background = "green";
+      }
+    });
+    
+    // -------------------------------
+    // Main UI Functions and Background Change after Login
+    // -------------------------------
+    // Questions array is empty as requested.
+    var modelPapers = [
+      { 
+        paperId: "Model Paper 1", 
+        questions: [
+  { section: "Physics", topic: "Oscillations", question: "A mass-spring system with a period of 2 s will have its period increased by a factor of √2 if the mass is:", options: ["Doubled", "Halved", "Tripled", "Unchanged"], answer: "Doubled" },
+  { section: "Physics", topic: "Mechanics", question: "A 5 kg block is pushed with a constant force of 20 N on a frictionless surface. What is its acceleration?", options: ["2 m/s²", "4 m/s²", "5 m/s²", "20 m/s²"], answer: "4 m/s²" },
+  { section: "Physics", topic: "Mechanics", question: "A 3 kg object is acted on by a 15 N force. Its acceleration is:", options: ["3 m/s²", "4 m/s²", "5 m/s²", "6 m/s²"], answer: "5 m/s²" },
+  { section: "Physics", topic: "Mechanics", question: "An object moving at constant velocity experiences a net force of:", options: ["0", "Nonzero", "Increasing", "Decreasing"], answer: "0" },
+  { section: "Physics", topic: "Mechanics", question: "Two particles of masses 2 kg and 3 kg tied together are pulled by a 25 N force. The system’s acceleration is:", options: ["2 m/s²", "3 m/s²", "4 m/s²", "5 m/s²"], answer: "5 m/s²" },
+  { section: "Physics", topic: "Mechanics", question: "A rod (length 2 m) rotates about one end with angular acceleration 2 rad/s². What is the tangential acceleration at the tip?", options: ["2 m/s²", "4 m/s²", "6 m/s²", "8 m/s²"], answer: "4 m/s²" },
+  { section: "Physics", topic: "Mechanics", question: "In a system of particles, if the net external force is zero, the center of mass will be:", options: ["At rest", "In motion with constant velocity", "Either at rest or moving with constant velocity", "Accelerated"], answer: "Either at rest or moving with constant velocity" },
+  { section: "Physics", topic: "Optical Instruments", question: "An optical instrument with 20× magnification produces an image that is:", options: ["20 times larger than the object", "Reduced in size", "Virtual", "With a 20 cm focal length"], answer: "20 times larger than the object" },
+  { section: "Physics", topic: "Electrostatics", question: "According to Coulomb’s law, if the distance between two charges doubles, the force becomes:", options: ["½", "¼", "⅛", "Doubled"], answer: "¼" },
+  { section: "Physics", topic: "Mirrors", question: "A plane mirror always produces an image that is:", options: ["Virtual", "Real", "Inverted", "Enlarged"], answer: "Virtual" },
+  { section: "Physics", topic: "Capacitance", question: "In a parallel–plate capacitor, if the plate separation is halved, the capacitance will:", options: ["Double", "Halve", "Remain the same", "Quadruple"], answer: "Double" },
+  { section: "Physics", topic: "Modern Physics", question: "In the Bohr model of hydrogen, the energy levels vary as:", options: ["1/n²", "n²", "n", "1/n"], answer: "1/n²" },
+  { section: "Physics", topic: "Modern Physics", question: "The radius of the nth orbit in a hydrogen atom is proportional to:", options: ["n²", "1/n²", "n", "√n"], answer: "n²" },
+  { section: "Physics", topic: "Modern Physics", question: "The de Broglie wavelength λ = h/p. If a particle’s momentum doubles, its wavelength becomes:", options: ["Halved", "Doubled", "Unchanged", "Quartered"], answer: "Halved" },
+  { section: "Physics", topic: "Thermodynamics", question: "A gas expands isobarically from 2 L to 5 L at 100 kPa. What is the work done?", options: ["300 J", "3000 J", "30 J", "3 J"], answer: "300 J" },
+  { section: "Physics", topic: "Thermodynamics", question: "A Carnot engine operates between 500 K and 300 K. What is its efficiency?", options: ["40%", "60%", "20%", "30%"], answer: "40%" },
+  { section: "Physics", topic: "Thermodynamics", question: "At constant volume, if an ideal gas’s temperature is doubled, its pressure will:", options: ["Double", "Halve", "Remain unchanged", "Quadruple"], answer: "Double" },
+  { section: "Physics", topic: "Semiconductors", question: "A PN junction diode typically begins to conduct in the forward direction at approximately:", options: ["0.7 V", "1.4 V", "0.3 V", "2 V"], answer: "0.7 V" },
+  { section: "Physics", topic: "Semiconductors", question: "A transistor with a current gain (β) of 100 will produce a collector current of 1 mA if the base current is:", options: ["10 μA", "1 μA", "100 μA", "0.1 μA"], answer: "10 μA" },
+  { section: "Physics", topic: "Semiconductors", question: "The reverse breakdown voltage of a Zener diode is known as the:", options: ["Zener voltage", "Threshold voltage", "Saturation voltage", "Cut–in voltage"], answer: "Zener voltage" },
+  { section: "Physics", topic: "Electromagnetic Induction", question: "Faraday’s law states that if magnetic flux changes twice as fast, the induced emf will be:", options: ["Doubled", "Halved", "Unchanged", "Quadrupled"], answer: "Doubled" },
+  { section: "Physics", topic: "Magnetism", question: "A long straight wire’s magnetic field is given by B = μ₀I/(2πr). If r doubles, B becomes:", options: ["Halved", "Doubled", "Quartered", "Unchanged"], answer: "Halved" },
+  { section: "Physics", topic: "Magnetism", question: "Currents in two parallel wires flowing in the same direction experience a force that is:", options: ["Attractive", "Repulsive", "Zero", "Varies with distance"], answer: "Attractive" },
+  { section: "Physics", topic: "Magnetism", question: "A solenoid with 1000 turns, length 0.5 m, carrying 2 A produces an internal field of approximately:", options: ["5 T", "0.005 T", "0.05 T", "0.5 T"], answer: "0.005 T" },
+  { section: "Physics", topic: "Waves", question: "A wave with speed 10 m/s and frequency 2 Hz has a wavelength of:", options: ["5 m", "10 m", "20 m", "2 m"], answer: "5 m" },
+  { section: "Physics", topic: "Waves", question: "In a medium where sound travels at 340 m/s, a 170 Hz tone has a wavelength of:", options: ["1 m", "2 m", "0.5 m", "5 m"], answer: "2 m" },
+  { section: "Physics", topic: "Miscellaneous", question: "The SI unit of force is:", options: ["Newton", "Joule", "Watt", "Pascal"], answer: "Newton" },  
+  { section: "Physics", topic: "Miscellaneous", question: "The SI unit of power is:", options: ["Watt", "Joule", "Newton", "Pascal"], answer: "Watt" },    
+  { section: "Physics", topic: "Miscellaneous", question: "A quantity measured in meters is a unit of:", options: ["Length", "Mass", "Time", "Temperature"], answer: "Length" },
+  { section: "Physics", topic: "Miscellaneous", question: "A scalar quantity is characterized by having:", options: ["Magnitude only", "Magnitude and direction", "Direction only", "Both magnitude and direction"], answer: "Magnitude only" },
+  { section: "Physics", topic: "Work, Energy & Power", question: "A constant force of 10 N moves an object 5 m in its direction. What is the work done?", options: ["10 J", "25 J", "50 J", "100 J"], answer: "50 J" },
+  { section: "Physics", topic: "Work, Energy & Power", question: "A machine does 200 J of work in 10 s. What is its power output?", options: ["20 W", "200 W", "2 W", "0.5 W"], answer: "20 W" },
+  { section: "Physics", topic: "Optics", question: "A converging lens has a focal length of 10 cm. To form a real image, an object must be placed:", options: ["Beyond 10 cm", "At 10 cm", "Within 10 cm", "At infinity"], answer: "Beyond 10 cm" },
+  { section: "Physics", topic: "Rotational Motion", question: "A disc rotates at 5 rad/s. What is its period of rotation?", options: ["1.26 s", "1.57 s", "2 s", "0.63 s"], answer: "1.26 s" },
+  { section: "Physics", topic: "AC Circuits", question: "The rms value of a 100 V peak AC voltage is:", options: ["70.7 V", "50 V", "100 V", "141 V"], answer: "70.7 V" },
+  { section: "Physics", topic: "Current Electricity", question: "Using Ohm’s law (V = IR), what is the voltage across a 10 Ω resistor carrying 2 A?", options: ["20 V", "5 V", "2 V", "10 V"], answer: "20 V" },
+  { section: "Physics", topic: "Current Electricity", question: "Three resistors of 5 Ω, 10 Ω, and 15 Ω connected in series have a total resistance of:", options: ["30 Ω", "15 Ω", "25 Ω", "50 Ω"], answer: "30 Ω" },
+  { section: "Physics", topic: "Current Electricity", question: "Two identical resistors of resistance R connected in parallel have an equivalent resistance of:", options: ["R/2", "2R", "R", "R/4"], answer: "R/2" },
+  { section: "Physics", topic: "Kinematics", question: "A car accelerates uniformly from rest to 20 m/s in 10 s. What is its acceleration?", options: ["1 m/s²", "2 m/s²", "3 m/s²", "4 m/s²"], answer: "2 m/s²" },
+  { section: "Physics", topic: "Gravitation", question: "What is the gravitational force between two 1 kg masses separated by 1 m? (G = 6.67×10⁻¹¹ N·m²/kg²)", options: ["6.67×10⁻¹¹ N", "6.67×10⁻¹⁰ N", "6.67×10⁻⁹ N", "6.67×10⁻¹² N"], answer: "6.67×10⁻¹¹ N" },
+  { section: "Physics", topic: "Gravitation", question: "If the distance between two masses doubles, their gravitational force becomes:", options: ["½", "¼", "⅛", "Unchanged"], answer: "¼" },
+  { section: "Physics", topic: "Thermal Properties", question: "The specific heat capacity of water is approximately:", options: ["4200 J/kg·K", "1000 J/kg·K", "2000 J/kg·K", "500 J/kg·K"], answer: "4200 J/kg·K" },
+  { section: "Physics", topic: "Kinetic Theory", question: "According to kinetic theory, the average kinetic energy of gas molecules is proportional to:", options: ["Temperature", "Pressure", "Volume", "Density"], answer: "Temperature" },
+  { section: "Physics", topic: "Mechanical Properties", question: "A 1 m metal rod expands by 1 mm when heated by 100°C. Its coefficient of linear expansion is approximately:", options: ["1×10⁻⁵ /°C", "1×10⁻⁴ /°C", "1×10⁻⁶ /°C", "1×10⁻³ /°C"], answer: "1×10⁻⁵ /°C" },
+  { section: "Physics", topic: "Mechanical Properties", question: "For an incompressible fluid in a pipe, if the pipe’s diameter halves, by what factor does the fluid’s speed increase?", options: ["2", "4", "8", "1"], answer: "4" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Benzene, due to its aromatic stability, undergoes mainly:", options: ["Electrophilic aromatic substitution", "Nucleophilic substitution", "Addition", "Elimination"], answer: "Electrophilic aromatic substitution" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "The IUPAC name for toluene is:", options: ["Methylbenzene", "Ethylbenzene", "Propylbenzene", "Benzene"], answer: "Methylbenzene" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Which of the following is an alcohol?", options: ["CH₃OH", "CH₄", "C₂H₆", "CH₃COOH"], answer: "CH₃OH" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Ethers contain the functional group:", options: ["R–O–R′", "R–OH", "R–COOH", "R–NH₂"], answer: "R–O–R′" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Aldehydes have the general formula:", options: ["RCHO", "RCOR′", "RCOOH", "RCH₂OH"], answer: "RCHO" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Ketones are represented by the formula:", options: ["RCHO", "RCOR′", "RCOOH", "RCH₂OH"], answer: "RCOR′" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Carboxylic acids contain which functional group?", options: ["–OH", "–COOH", "–NH₂", "–SH"], answer: "–COOH" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Proteins are polymers of:", options: ["Amino acids", "Nucleotides", "Monosaccharides", "Fatty acids"], answer: "Amino acids" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Alkanes are saturated hydrocarbons with the formula:", options: ["CₙH₂ₙ₊₂", "CₙH₂ₙ", "CₙH₂ₙ₋₂", "CₙHₙ"], answer: "CₙH₂ₙ₊₂" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Isomerism in organic compounds may be:", options: ["Structural and stereoisomerism", "Only structural", "Only stereoisomerism", "Nonexistent"], answer: "Structural and stereoisomerism" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "A primary amine has the structure:", options: ["RNH₂", "R₂NH", "R₃N", "NH₃"], answer: "RNH₂" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Tollens’ reagent is used to detect:", options: ["Aldehydes", "Ketones", "Alcohols", "Carboxylic acids"], answer: "Aldehydes" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "The suffix “-ol” in organic nomenclature denotes:", options: ["Alcohol", "Aldehyde", "Ketone", "Acid"], answer: "Alcohol" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Aromatic compounds typically contain:", options: ["Conjugated ring systems", "Saturated rings", "Isolated double bonds", "No double bonds"], answer: "Conjugated ring systems" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "Ethanol is widely used as an antiseptic.", options: ["True", "False", "Sometimes", "Only in mixtures"], answer: "True" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "In SN2 reactions, the mechanism is:", options: ["Single-step bimolecular", "Two-step unimolecular", "Radical mediated", "Involves carbocation rearrangement"], answer: "Single-step bimolecular" },
+  { section: "Chemistry", topic: "Organic Chemistry", question: "In SN1 reactions, the rate increases with:", options: ["More stable carbocations", "Stronger nucleophiles", "Lower solvent polarity", "Higher temperature"], answer: "More stable carbocations" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "One mole is defined as containing approximately:", options: ["6.02×10²³ particles", "1×10²³ particles", "6.02×10²² particles", "1 mole"], answer: "6.02×10²³ particles" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "The rate of a chemical reaction increases with:", options: ["Higher temperature", "Lower temperature", "Lower concentration", "Catalyst removal"], answer: "Higher temperature" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "Colligative properties depend on:", options: ["The number of solute particles", "The nature of the solute", "Only the solvent’s properties", "Pressure only"], answer: "The number of solute particles" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "Ionic equilibrium often involves:", options: ["Acid–base reactions", "Precipitation", "Both A and B", "Neither"], answer: "Both A and B" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "The enthalpy change of a reaction is typically measured by:", options: ["Calorimetry", "Spectroscopy", "Titration", "Chromatography"], answer: "Calorimetry" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "The standard electrode potential is measured relative to the:", options: ["Standard hydrogen electrode", "Calomel electrode", "Silver–chloride electrode", "None"], answer: "Standard hydrogen electrode" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "A crystalline solid is characterized by:", options: ["A highly ordered structure", "A random molecular arrangement", "Fluidity", "Amorphous properties"], answer: "A highly ordered structure" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "Surface chemistry studies phenomena at:", options: ["Interfaces", "In the bulk", "In the gas phase", "In liquids only"], answer: "Interfaces" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "Redox reactions are defined by the transfer of:", options: ["Electrons", "Protons", "Neutrons", "Photons"], answer: "Electrons" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "Atomic structure is often probed by:", options: ["Spectroscopy", "X–ray diffraction", "Both", "Neither"], answer: "Both" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "According to kinetic theory, the average kinetic energy of gas molecules is given by:", options: ["(3/2)kT", "(1/2)kT", "3kT", "kT"], answer: "(3/2)kT" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "For an ideal gas (PV = nRT), if pressure doubles at constant temperature, the volume becomes:", options: ["Halved", "Doubled", "Unchanged", "Quadrupled"], answer: "Halved" },
+  { section: "Chemistry", topic: "Physical Chemistry", question: "In a redox reaction, the species that gains electrons is the:", options: ["Oxidizing agent", "Reducing agent", "Catalyst", "Inert substance"], answer: "Oxidizing agent" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Chemical bonding involves the sharing of electrons. Which type of bond is formed by a shared pair?", options: ["Ionic", "Covalent", "Metallic", "Hydrogen"], answer: "Covalent" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "A large electronegativity difference (>1.7) between two atoms generally indicates an:", options: ["Covalent bond", "Ionic bond", "Metallic bond", "Hydrogen bond"], answer: "Ionic bond" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "In methane (CH₄), carbon is:", options: ["sp hybridized", "sp² hybridized", "sp³ hybridized", "sp³d hybridized"], answer: "sp³ hybridized" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "P–block elements often show variable oxidation states because:", options: ["They form ionic compounds only", "Their p–orbitals are involved in bonding", "They have filled d–orbitals", "They are always metals"], answer: "Their p–orbitals are involved in bonding" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Phosphorus pentoxide (P₄O₁₀) is typically prepared from:", options: ["White phosphorus", "Red phosphorus", "Black phosphorus", "Violet phosphorus"], answer: "White phosphorus" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Coordination compounds usually have a coordination number of:", options: ["2", "4", "6", "8"], answer: "6" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "The vivid colors of many transition metal complexes are due to:", options: ["d–d transitions", "Charge transfer transitions", "Both A and B", "None of these"], answer: "Both A and B" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "A characteristic property of d–block elements is:", options: ["Low melting points", "Formation of colored compounds", "Only one oxidation state", "Nonmetallic behavior"], answer: "Formation of colored compounds" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "In a group of the periodic table, atomic size:", options: ["Increases down the group", "Decreases down the group", "Remains constant", "Varies randomly"], answer: "Increases down the group" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Metallurgy is concerned with the extraction of metals from:", options: ["Their pure elements", "Ores", "Alloys", "Salts"], answer: "Ores" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "In group 1, period 3, the element is:", options: ["Lithium", "Sodium", "Potassium", "Calcium"], answer: "Sodium" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Hydrogen is placed in group 1 because it:", options: ["Loses one electron", "Can form H⁺ ions", "Has one electron", "All of the above"], answer: "All of the above" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "Qualitative analysis in inorganic chemistry primarily involves:", options: ["Determining concentration", "Identification of ions", "Synthesis of compounds", "Reaction mechanism studies"], answer: "Identification of ions" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "An example of an amphoteric oxide is:", options: ["Na₂O", "Al₂O₃", "CaO", "MgO"], answer: "Al₂O₃" },
+  { section: "Chemistry", topic: "Inorganic Chemistry", question: "The bond angle in water (H₂O) is approximately:", options: ["90°", "104.5°", "120°", "180°"], answer: "104.5°" },
+  { section: "Biology", topic: "Botany - Biomolecules", question: "Starch is a polymer of:", options: ["Glucose", "Fructose", "Sucrose", "Galactose"], answer: "Glucose" },
+  { section: "Biology", topic: "Botany - Biomolecules", question: "Proteins are composed of:", options: ["Amino acids", "Nucleotides", "Monosaccharides", "Fatty acids"], answer: "Amino acids" },
+  { section: "Biology", topic: "Zoology - Evolution", question: "The study of fossils to understand past life is called:", options: ["Paleontology", "Archaeology", "Geology", "Anthropology"], answer: "Paleontology" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "In a dihybrid cross, the expected phenotypic ratio is:", options: ["9:3:3:1", "3:1", "1:1:1:1", "2:1"], answer: "9:3:3:1" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "Mendel’s law of segregation states that:", options: ["Alleles separate during gamete formation", "Alleles always combine equally", "Dominant alleles are always expressed", "None of these"], answer: "Alleles separate during gamete formation" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "The term 'genotype' refers to:", options: ["The genetic constitution of an organism", "The physical appearance", "The environment", "None of these"], answer: "The genetic constitution of an organism" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "Natural selection is best described as:", options: ["Survival of the fittest", "Inheritance of acquired traits", "Random mutation", "Genetic drift"], answer: "Survival of the fittest" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "In a monohybrid cross of two heterozygous individuals, the genotypic ratio is:", options: ["1:2:1", "3:1", "1:1", "2:1"], answer: "1:2:1" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "The principle of independent assortment applies to genes located on:", options: ["Different chromosomes", "The same chromosome", "Mitochondrial DNA", "None of these"], answer: "Different chromosomes" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "A mutation that results in a loss of function is typically:", options: ["Recessive", "Dominant", "Co-dominant", "Lethal"], answer: "Recessive" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "Which process is responsible for the evolution of new species?", options: ["Natural selection", "Genetic drift", "Mutation", "All of the above"], answer: "All of the above" },
+  { section: "Biology", topic: "Botany - Genetics & Evolution", question: "The binomial nomenclature system was developed by:", options: ["Carl Linnaeus", "Charles Darwin", "Gregor Mendel", "Alfred Russel Wallace"], answer: "Carl Linnaeus" },
+  { section: "Biology", topic: "Zoology - Classification", question: "The branch of biology that deals with the classification of organisms is known as:", options: ["Taxonomy", "Genetics", "Physiology", "Ecology"], answer: "Taxonomy" },
+  { section: "Biology", topic: "Zoology - Homeostasis", question: "The process by which organisms maintain a stable internal environment is called:", options: ["Homeostasis", "Metabolism", "Digestion", "Excretion"], answer: "Homeostasis" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "The study of plant diversity is also known as:", options: ["Botany", "Phylogeny", "Taxonomy", "Ecology"], answer: "Taxonomy" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "The structure of the plant cell wall is mainly composed of:", options: ["Cellulose", "Chitin", "Collagen", "Pectin"], answer: "Cellulose" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "A major adaptation of desert plants is:", options: ["Thick cuticles", "Broad leaves", "Shallow roots", "High transpiration rates"], answer: "Thick cuticles" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "A plant that lives for more than two years is called:", options: ["Perennial", "Annual", "Biennial", "Ephemeral"], answer: "Perennial" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "The region of the plant where new cells are produced is called the:", options: ["Meristem", "Xylem", "Phloem", "Cortex"], answer: "Meristem" },
+  { section: "Biology", topic: "Botany - Plant Diversity", question: "The phenomenon where plants bend toward light is called:", options: ["Phototropism", "Geotropism", "Hydrotropism", "Thigmotropism"], answer: "Phototropism" },
+  { section: "Biology", topic: "Zoology - Human Health", question: "Which disease is caused by a virus?", options: ["Tuberculosis", "Malaria", "Influenza", "Diabetes"], answer: "Influenza" },
+  { section: "Biology", topic: "Zoology - Animal Husbandry", question: "Animal husbandry primarily involves the breeding and management of:", options: ["Livestock", "Pets", "Wild animals", "Insects"], answer: "Livestock" },
+  { section: "Biology", topic: "Zoology - Ecology", question: "The study of relationships among living organisms is known as:", options: ["Ecology", "Taxonomy", "Anatomy", "Physiology"], answer: "Ecology" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "In angiosperms, the male gametophyte is:", options: ["Pollen grain", "Ovule", "Seed", "Flower"], answer: "Pollen grain" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "Double fertilization in angiosperms leads to the formation of:", options: ["Zygote and endosperm", "Two zygotes", "Seed coat", "None"], answer: "Zygote and endosperm" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "Reproduction that involves only one parent is called:", options: ["Asexual reproduction", "Sexual reproduction", "Hybridization", "None"], answer: "Asexual reproduction" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "Transpiration in plants involves the loss of:", options: ["Water vapor", "Oxygen", "Carbon dioxide", "Nutrients"], answer: "Water vapor" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "In seed plants, the protective outer layer of the seed is called the:", options: ["Seed coat", "Endosperm", "Cotyledon", "Embryo"], answer: "Seed coat" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "The process of seed germination requires:", options: ["Water, oxygen, and suitable temperature", "Only water", "Only oxygen", "Light only"], answer: "Water, oxygen, and suitable temperature" },
+  { section: "Biology", topic: "Botany - Plant Reproduction", question: "A biennial plant completes its life cycle in:", options: ["Two years", "One year", "Three years", "Half a year"], answer: "Two years" },
+  { section: "Biology", topic: "Zoology - Human Welfare", question: "Which method is used to control pests in agriculture?", options: ["Biological control", "Chemical control", "Cultural control", "All of the above"], answer: "All of the above" },
+  { section: "Biology", topic: "Zoology - Human Welfare", question: "A major contribution of zoology to human welfare is in the field of:", options: ["Medicine", "Architecture", "Astronomy", "Geology"], answer: "Medicine" },
+  { section: "Biology", topic: "Zoology - Human Reproduction", question: "In human reproduction, the site of fertilization is the:", options: ["Ovary", "Fallopian tube", "Uterus", "Cervix"], answer: "Fallopian tube" },
+  { section: "Biology", topic: "Zoology - Human Reproduction", question: "In human reproduction, the site where sperm meets the egg is the:", options: ["Ovary", "Uterus", "Fallopian tube", "Vagina"], answer: "Fallopian tube" },
+  { section: "Biology", topic: "Zoology - Structural Organization", question: "The structure that connects muscles to bones is called:", options: ["Tendon", "Ligament", "Cartilage", "Joint"], answer: "Tendon" },
+  { section: "Biology", topic: "Zoology - Structural Organization", question: "The basic unit of organization in animals is the:", options: ["Cell", "Tissue", "Organ", "Organ system"], answer: "Cell" },
+  { section: "Biology", topic: "Zoology - Structural Organization", question: "A primary component of the animal cell membrane is:", options: ["Phospholipids", "Cellulose", "Chitin", "Keratin"], answer: "Phospholipids" },
+  { section: "Biology", topic: "Zoology - Structural Organization", question: "In human anatomy, the structure that connects muscles to bones is called:", options: ["Tendon", "Ligament", "Cartilage", "Joint"], answer: "Tendon" },
+  { section: "Biology", topic: "Botany - Plant Anatomy", question: "Xylem tissue is responsible for:", options: ["Water transport", "Food storage", "Photosynthesis", "Reproduction"], answer: "Water transport" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "Photosynthesis in plants occurs primarily in the:", options: ["Mitochondria", "Chloroplasts", "Vacuoles", "Nucleus"], answer: "Chloroplasts" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "The major pigment responsible for photosynthesis is:", options: ["Chlorophyll a", "Chlorophyll b", "Carotenoids", "Xanthophylls"], answer: "Chlorophyll a" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "C4 photosynthesis is an adaptation found in:", options: ["Grasses in hot, dry environments", "Tropical trees", "Aquatic plants", "None"], answer: "Grasses in hot, dry environments" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "Stomata are primarily responsible for:", options: ["Gas exchange", "Water transport", "Nutrient absorption", "Support"], answer: "Gas exchange" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "Plant hormones that promote cell elongation include:", options: ["Auxins", "Gibberellins", "Cytokinins", "Ethylene"], answer: "Gibberellins" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "Which tissue is responsible for water transport in plants?", options: ["Xylem", "Phloem", "Epidermis", "Collenchyma"], answer: "Xylem" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "The term 'photoperiodism' refers to:", options: ["Response to day length", "Response to light intensity", "Response to temperature", "None"], answer: "Response to day length" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "Which pigment is primarily responsible for capturing light energy?", options: ["Chlorophyll", "Carotenoids", "Anthocyanins", "Xanthophylls"], answer: "Chlorophyll" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "The process that converts light energy into chemical energy in plants is:", options: ["Photosynthesis", "Respiration", "Transpiration", "Fermentation"], answer: "Photosynthesis" },
+  { section: "Biology", topic: "Botany - Plant Physiology", question: "In C3 plants, the first product of carbon fixation is:", options: ["3-phosphoglycerate", "Oxaloacetate", "Malate", "Glucose"], answer: "3-phosphoglycerate" },
+  { section: "Biology", topic: "Botany - Morphology of Flowering Plants", question: "The arrangement of flowers on a plant is referred to as:", options: ["Inflorescence", "Phyllotaxy", "Phytomer", "None"], answer: "Inflorescence" },
+  { section: "Biology", topic: "Botany - Ecology & Environment", question: "In an ecosystem, the flow of energy is:", options: ["One-way", "Cyclic", "Bidirectional", "Random"], answer: "One-way" },
+  { section: "Biology", topic: "Botany - Ecology & Environment", question: "Biological magnification refers to:", options: ["Increasing concentration of toxins at higher trophic levels", "Decrease in biomass", "Increase in genetic diversity", "All of these"], answer: "Increasing concentration of toxins at higher trophic levels" },
+  { section: "Biology", topic: "Botany - Ecology & Environment", question: "Epiphytic plants are commonly found in:", options: ["Rainforests", "Deserts", "Tundras", "Grasslands"], answer: "Rainforests" },
+  { section: "Biology", topic: "Botany - Ecology & Environment", question: "CAM photosynthesis is an adaptation to:", options: ["Water conservation", "High light intensity", "Cold environments", "Nutrient-poor soils"], answer: "Water conservation" },
+  { section: "Biology", topic: "Zoology - Animal Kingdom", question: "Which of the following animals is an invertebrate?", options: ["Earthworm", "Frog", "Lizard", "Sparrow"], answer: "Earthworm" },
+  { section: "Biology", topic: "Zoology - Animal Kingdom", question: "A characteristic feature of vertebrates is:", options: ["Presence of a spine", "Exoskeleton", "No internal skeleton", "Segmented body"], answer: "Presence of a spine" },
+  { section: "Biology", topic: "Zoology - Human Evolution", question: "Bipedalism refers to the ability to:", options: ["Walk on two legs", "Use tools", "Speak", "Have opposable thumbs"], answer: "Walk on two legs" },
+  { section: "Biology", topic: "Zoology - Human Evolution", question: "The process by which organisms become better suited to their environment is called:", options: ["Adaptation", "Mutation", "Speciation", "Genetic drift"], answer: "Adaptation" },
+  { section: "Biology", topic: "Botany - Cell Structure & Function", question: "Vascular tissues in plants include:", options: ["Xylem and Phloem", "Epidermis and Cortex", "Mesophyll", "None"], answer: "Xylem and Phloem" },
+  { section: "Biology", topic: "Botany - Cell Structure & Function", question: "The primary site of nutrient absorption in plants is the:", options: ["Root hairs", "Stem", "Leaves", "Flowers"], answer: "Root hairs" },
+  { section: "Biology", topic: "Botany - Cell Structure & Function", question: "Which of the following is not a function of plant roots?", options: ["Anchorage", "Absorption", "Photosynthesis", "Storage"], answer: "Photosynthesis" },
+  { section: "Biology", topic: "Botany - Cell Structure & Function", question: "The specialized cells forming stomata are called:", options: ["Guard cells", "Pavement cells", "Trichomes", "Bulliform cells"], answer: "Guard cells" },
+  { section: "Biology", topic: "Botany - Cell Structure & Function", question: "Plant cells differ from animal cells in that they have:", options: ["Cell walls", "Chloroplasts", "Large central vacuoles", "All of the above"], answer: "All of the above" },
+  { section: "Biology", topic: "Zoology - Nervous System", question: "Which of the following is not a function of the human nervous system?", options: ["Sensation", "Coordination", "Digestion", "Memory"], answer: "Digestion" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The human heart has how many chambers?", options: ["2", "3", "4", "5"], answer: "4" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which blood vessel carries oxygenated blood from the lungs to the heart?", options: ["Pulmonary vein", "Pulmonary artery", "Aorta", "Vena cava"], answer: "Pulmonary vein" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The primary function of red blood cells is to:", options: ["Transport oxygen", "Fight infection", "Clot blood", "Regulate body temperature"], answer: "Transport oxygen" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which part of the brain is responsible for balance?", options: ["Cerebrum", "Cerebellum", "Brainstem", "Hypothalamus"], answer: "Cerebellum" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The process by which food is broken down in the human body is called:", options: ["Digestion", "Absorption", "Metabolism", "Excretion"], answer: "Digestion" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The primary site of nutrient absorption in the human small intestine is the:", options: ["Duodenum", "Jejunum", "Ileum", "Colon"], answer: "Jejunum" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The hormone insulin is produced in the:", options: ["Pancreas", "Liver", "Adrenal cortex", "Thyroid"], answer: "Pancreas" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which of the following is a component of the human immune system?", options: ["Lymphocytes", "Erythrocytes", "Platelets", "Neurons"], answer: "Lymphocytes" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which organ is primarily responsible for detoxification in the human body?", options: ["Kidney", "Liver", "Spleen", "Lungs"], answer: "Liver" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The largest organ in the human body is:", options: ["Skin", "Liver", "Heart", "Brain"], answer: "Skin" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The smallest functional unit of the kidney is:", options: ["Nephron", "Glomerulus", "Loop of Henle", "Ureter"], answer: "Nephron" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The sinoatrial node is located in the:", options: ["Right atrium", "Left atrium", "Right ventricle", "Left ventricle"], answer: "Right atrium" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which vitamin is essential for blood clotting?", options: ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin K"], answer: "Vitamin K" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "In the human skeletal system, the bone primarily involved in red blood cell production is the:", options: ["Femur", "Ribs", "Sternum", "Vertebrae"], answer: "Sternum" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which structure in the lungs is the site of gas exchange?", options: ["Bronchi", "Trachea", "Alveoli", "Nasal cavity"], answer: "Alveoli" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The process of gas exchange in the lungs occurs in the:", options: ["Bronchi", "Trachea", "Alveoli", "Nasal cavity"], answer: "Alveoli" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which hormone regulates the sleep-wake cycle in humans?", options: ["Melatonin", "Cortisol", "Adrenaline", "Insulin"], answer: "Melatonin" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which of the following is not a function of the human liver?", options: ["Bile production", "Detoxification", "Insulin production", "Glycogen storage"], answer: "Insulin production" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "The process of digestion begins in the:", options: ["Mouth", "Stomach", "Small intestine", "Large intestine"], answer: "Mouth" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which hormone increases blood calcium levels?", options: ["Calcitonin", "Parathyroid hormone", "Insulin", "Thyroxine"], answer: "Parathyroid hormone" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which of the following is part of the human central nervous system?", options: ["Spinal cord", "Nerves", "Ganglia", "Cranial nerves"], answer: "Spinal cord" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "In the human circulatory system, the largest artery is the:", options: ["Carotid", "Aorta", "Femoral", "Pulmonary artery"], answer: "Aorta" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "In animal physiology, the process of excretion is primarily carried out by the:", options: ["Kidneys", "Liver", "Lungs", "Heart"], answer: "Kidneys" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Human blood is typically red due to the presence of:", options: ["Hemoglobin", "Myoglobin", "Chlorophyll", "Melanin"], answer: "Hemoglobin" },
+  { section: "Biology", topic: "Zoology - Human Physiology", question: "Which of the following is a function of the human skeletal system?", options: ["Protection", "Blood cell production", "Mineral storage", "All of the above"], answer: "All of the above" },
+  { section: "Biology", topic: "Zoology - Adaptations", question: "An adaptation seen in aquatic animals is:", options: ["Streamlined body", "Thick fur", "Large ears", "Prehensile tail"], answer: "Streamlined body" },
+] // Questions removed
+      }
+    ];
+    
+    // Global variable to hold subject grouping information
+    var subjectGroups = {};
+    
+    function showMainUI() {
+      document.body.style.background = "#f5f5f5";
+      document.getElementById("landing").style.display = "none";
+      document.getElementById("loginWindow").style.display = "none";
+      document.getElementById("signupWindow").style.display = "none";
+      document.getElementById("mainUI").style.display = "block";
+      
+      var userEmail = localStorage.getItem("loggedInUser");
+      db.collection("users").doc(userEmail).get().then(function(doc) {
+        if (doc.exists) {
+          var name = doc.data().username || "User";
+          document.getElementById("accountName").innerText = name;
+          updatePapersTable();
+          updatePerformanceAnalysis();
+          showSection("modelPapers");
+        }
+      });
+    }
+    
+    // Warn if exam in progress when switching sections
+    document.getElementById("modelPapersTab").addEventListener("click", function(){
+      if(examQuestions.length > 0 && !examSubmitted && !confirm("Are you sure you want to leave the test? Your current progress will be lost.")) {
+        return;
+      }
+      examQuestions = [];
+      userAnswers = [];
+      showSection("modelPapers");
+    });
+    document.getElementById("performanceTab").addEventListener("click", function(){
+      if(examQuestions.length > 0 && !examSubmitted && !confirm("Are you sure you want to leave the test? Your current progress will be lost.")) {
+        return;
+      }
+      examQuestions = [];
+      userAnswers = [];
+      showSection("performance");
+      updatePerformanceAnalysis();
+    });
+    
+    function showSection(sectionId) {
+      document.getElementById("modelPapers").style.display = "none";
+      document.getElementById("performance").style.display = "none";
+      document.getElementById("result").style.display = "none";
+      document.getElementById("exam").style.display = "none";
+      if(sectionId === "exam") {
+        document.getElementById("exam").style.display = "flex";
+      } else {
+        document.getElementById(sectionId).style.display = "block";
+      }
+    }
+    
+    // -------------------------------
+    // Exam Logic
+    // -------------------------------
+    var examQuestions = [];
+    var currentQuestionIndex = 0;
+    var userAnswers = [];
+    var selectedPaper = null;
+    
+    function showQuestion(index) {
+      var container = document.getElementById("question-container");
+      var q = examQuestions[index];
+      container.innerHTML = "<div class='question-number'>Question " + (index + 1) + " of " + examQuestions.length + "</div>" +
+                            "<h3>" + q.section + "</h3>" +
+                            "<p class='question-text'>" + q.question + "</p>";
+      container.innerHTML += "<form id='optionForm'>";
+      q.options.forEach(function(option, i) {
+        var checked = (userAnswers[index] !== undefined && userAnswers[index].trim() !== "" && userAnswers[index] === option) ? "checked" : "";
+        container.innerHTML += "<div class='option'><input type='radio' name='option' id='opt" + i + "' value='" + option + "' " + checked + ">" +
+                               "<label for='opt" + i + "'>" + option + "</label></div>";
+      });
+      container.innerHTML += "</form>";
+      document.getElementById("prevBtn").style.display = (index === 0) ? "none" : "inline";
+      document.getElementById("nextBtn").style.display = (index === examQuestions.length - 1) ? "none" : "inline";
+      updateSidebar();
+    }
+    
+    // Modified saveAnswer: if no option is selected, mark as skipped (empty string)
+    function saveAnswer() {
+      var options = document.getElementsByName("option");
+      var answered = false;
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].checked) {
+          userAnswers[currentQuestionIndex] = options[i].value;
+          answered = true;
+        }
+      }
+      if (!answered) {
+        userAnswers[currentQuestionIndex] = "";
+      }
+      updateSidebar();
+    }
+    
+    document.getElementById("nextBtn").addEventListener("click", function(){
+      saveAnswer();
+      if (currentQuestionIndex < examQuestions.length - 1) {
+        currentQuestionIndex++;
+        showQuestion(currentQuestionIndex);
+      }
+    });
+    
+    document.getElementById("prevBtn").addEventListener("click", function(){
+      saveAnswer();
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        showQuestion(currentQuestionIndex);
+      }
+    });
+    
+    function startExam() {
+      currentQuestionIndex = 0;
+      userAnswers = [];
+      examSubmitted = false;
+      subjectGroups = {};
+      examQuestions.forEach(function(q, index) {
+        var subject = q.section;
+        if (!subjectGroups[subject]) {
+          subjectGroups[subject] = [];
+        }
+        subjectGroups[subject].push(index);
+      });
+      showQuestion(currentQuestionIndex);
+      updateSidebar();
+      startTimer();
+    }
+    
+    var examDuration = 3 * 60 * 60; // 3 hours in seconds
+    var timerInterval;
+    function startTimer(){
+      var timeLeft = examDuration;
+      clearInterval(timerInterval);
+      timerInterval = setInterval(function(){
+        var hours = Math.floor(timeLeft / 3600);
+        var minutes = Math.floor((timeLeft % 3600) / 60);
+        var seconds = timeLeft % 60;
+        document.getElementById("timer").innerText = hours + "h " + minutes + "m " + seconds + "s remaining";
+        timeLeft--;
+        if (timeLeft < 0) {
+          clearInterval(timerInterval);
+          alert("Time's up!");
+          submitExam();
+        }
+      }, 1000);
+    }
+    
+    document.getElementById("submitBtn").addEventListener("click", function(){
+      if (confirm("Are you sure you want to submit the exam?")) {
+        submitExam();
+      }
+    });
+    
+    function submitExam(){
+      saveAnswer();
+      clearInterval(timerInterval);
+      examSubmitted = true;
+      updateSidebar();
+      var score = 0;
+      var mistakes = {};
+      var resultHTML = "<h2>Exam Results</h2>";
+      // Modified candidateAnswer logic: treat undefined as empty string so not-opened questions are 'unanswered'
+      for (var i = 0; i < examQuestions.length; i++) {
+        var q = examQuestions[i];
+        var candidateAnswer = (userAnswers[i] === undefined) ? "" : userAnswers[i];
+        var correctAnswer = q.answer;
+        var questionResult = "";
+        if (candidateAnswer === correctAnswer) {
+          score += 4;
+          questionResult = "<span class='correct'>Correct</span>";
+        } else if (candidateAnswer === "") {
+          questionResult = "<span class='unanswered'>Unanswered</span>";
+          mistakes[q.topic] = (mistakes[q.topic] || 0) + 1;
+        } else {
+          score -= 1;
+          questionResult = "<span class='wrong'>Wrong</span>";
+          mistakes[q.topic] = (mistakes[q.topic] || 0) + 1;
+        }
+        resultHTML += "<div class='result-question'>";
+        resultHTML += "<div class='question-number'>Question " + (i + 1) + ":</div>";
+        resultHTML += "<div class='question-text'>" + q.question + "</div>";
+        resultHTML += "<div class='candidate-answer'><strong>Your Answer:</strong> " + (candidateAnswer === "" ? "No answer" : candidateAnswer) + "</div>";
+        resultHTML += "<div class='correct-answer'><strong>Correct Answer:</strong> " + correctAnswer + "</div>";
+        resultHTML += "<div class='question-result'><strong>Result:</strong> " + questionResult + "</div>";
+        resultHTML += "</div><hr>";
+      }
+      resultHTML += "<h3>Your Total Score: " + score + " out of " + (examQuestions.length * 4) + "</h3>";
+      
+      var userEmail = localStorage.getItem("loggedInUser");
+      db.collection("users").doc(userEmail).update({
+        papers: firebase.firestore.FieldValue.arrayUnion({
+          paperId: "Model Paper 1",
+          score: score,
+          total: examQuestions.length * 4,
+          mistakes: mistakes,
+          date: new Date().toLocaleString(),
+          completed: true
+        })
+      }).then(function() {
+        showSection("result");
+        document.getElementById("result").innerHTML = resultHTML;
+        updatePapersTable();
+      }).catch(function(error) {
+        alert("Error saving exam result: " + error.message);
+      });
+    }
+    
+    // Function to update the sidebar with subject question boxes
+    function updateSidebar() {
+      var sidebar = document.getElementById("exam-sidebar");
+      sidebar.innerHTML = "";
+      for (var subject in subjectGroups) {
+        var groupDiv = document.createElement("div");
+        groupDiv.className = "subject-group";
+        var subjectHeader = document.createElement("h4");
+        subjectHeader.innerText = subject;
+        groupDiv.appendChild(subjectHeader);
+        var indices = subjectGroups[subject];
+        indices.forEach(function(qIndex, i) {
+          var box = document.createElement("div");
+          box.className = "question-box";
+          // Highlight active question box
+          if (parseInt(qIndex) === currentQuestionIndex) {
+            box.classList.add("active");
+          }
+          box.innerText = (i + 1);
+          box.dataset.qIndex = qIndex;
+          // If the question has been visited:
+          if (userAnswers[qIndex] !== undefined) {
+            if (userAnswers[qIndex].trim() !== "") {
+              box.style.backgroundColor = "#90EE90"; // light green for answered
+            } else {
+              box.style.backgroundColor = "#ffcccb"; // light red for skipped
+            }
+          } else {
+            box.style.backgroundColor = "#f0f0f0"; // default for not yet visited
+          }
+          box.addEventListener("click", function(){
+            currentQuestionIndex = parseInt(this.dataset.qIndex);
+            showQuestion(currentQuestionIndex);
+          });
+          groupDiv.appendChild(box);
+        });
+        sidebar.appendChild(groupDiv);
+      }
+    }
+    
+    // Update Model Papers table with highest marks for each paper.
+    function updatePapersTable() {
+      var userEmail = localStorage.getItem("loggedInUser");
+      db.collection("users").doc(userEmail).get().then(function(doc) {
+        if (doc.exists) {
+          var userRecord = doc.data();
+          var tbody = document.getElementById("papersTableBody");
+          tbody.innerHTML = "";
+          modelPapers.forEach(function(paper) {
+            var row = document.createElement("tr");
+            var attempts = (userRecord.papers || []).filter(p => p.paperId === paper.paperId);
+            var status = attempts.length > 0 && attempts.some(a => a.completed) ? "Completed" : "Not Attempted";
+            var marks = "-";
+            if(attempts.length > 0) {
+              var highestScore = Math.max(...attempts.map(a => a.score));
+              var totalMarks = attempts[0].total;
+              marks = highestScore + " / " + totalMarks;
+              if(status === "Completed") {
+                row.classList.add('completed');
+              }
+            }
+            row.innerHTML = "<td>" + paper.paperId + "</td>" +
+                            "<td>" + status + "</td>" +
+                            "<td>" + marks + "</td>";
+            row.addEventListener("click", function(){
+              if(examQuestions.length > 0 && !examSubmitted && !confirm("Are you sure you want to start a new test? Your current progress will be lost.")) {
+                return;
+              }
+              selectedPaper = paper;
+              // Use empty questions array as per request.
+              examQuestions = paper.questions;
+              currentQuestionIndex = 0;
+              userAnswers = [];
+              examSubmitted = false;
+              showSection("exam");
+              startExam();
+            });
+            tbody.appendChild(row);
+          });
+        }
+      });
+    }
+    
+    function updatePerformanceAnalysis() {
+      var userEmail = localStorage.getItem("loggedInUser");
+      db.collection("users").doc(userEmail).get().then(function(doc) {
+        if (!doc.exists) {
+          document.getElementById("suggestions").innerHTML = "";
+          return;
+        }
+        var userRecord = doc.data();
+        var suggestionsHtml = "";
+        if (userRecord.papers && userRecord.papers.length > 0) {
+          var latestPaper = userRecord.papers[userRecord.papers.length - 1];
+          var mistakes = latestPaper.mistakes || {};
+          if (Object.keys(mistakes).length > 0) {
+            suggestionsHtml += "<h4>Performance Analysis:</h4>";
+            suggestionsHtml += "<p>Areas needing improvement:</p><ul>";
+            Object.entries(mistakes).forEach(function(entry) {
+              var topic = entry[0], count = entry[1];
+              suggestionsHtml += "<li><strong>" + topic + ":</strong> " + count + " mistake(s)</li>";
+            });
+            suggestionsHtml += "</ul>";
+          } else {
+            suggestionsHtml = "<h4>Performance Analysis:</h4><p>No mistakes recorded. Great job!</p>";
+          }
+        }
+        document.getElementById("suggestions").innerHTML = suggestionsHtml;
+        
+        if (window.performanceChart && typeof window.performanceChart.destroy === "function") {
+          window.performanceChart.destroy();
+        }
+        var labels = [];
+        var dataArr = [];
+        if (userRecord.papers) {
+          userRecord.papers.forEach(function(p) {
+            labels.push(p.paperId + " (" + p.date + ")");
+            dataArr.push(p.score);
+          });
+        }
+        var ctx = document.getElementById("performanceChart").getContext("2d");
+        window.performanceChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Score',
+              data: dataArr,
+              backgroundColor: 'rgba(0, 123, 255, 0.6)'
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
