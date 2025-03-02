@@ -1,0 +1,267 @@
+/* Global Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+    color: #333;
+    transition: background 0.5s, color 0.5s;
+  }
+  
+  nav {
+    background: #1a73e8;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: background 0.3s, transform 0.3s;
+  }
+  
+  nav:hover {
+    transform: scale(1.02);
+  }
+  /* Additional CSS for the exam result sections */
+.result-section {
+  border: 2px solid #1a73e8;
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.result-section h2 {
+  text-align: center;
+  color: #1a73e8;
+  margin-bottom: 10px;
+}
+
+.result-section p {
+  margin: 8px 0;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+  
+  /* Main container styling with entrance animation (for non‑exam containers) */
+  .container {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    padding: 40px;
+    margin: 60px auto;
+    max-width: 900px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeSlideIn 1s forwards;
+    transition: transform 0.3s;
+  }
+  
+  @keyframes fadeSlideIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  h2, h3 {
+    color: #1a73e8;
+    text-align: center;
+    margin-bottom: 20px;
+    animation: slideIn 0.8s ease-out forwards;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  button {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 1em;
+    transition: background 0.3s, transform 0.3s;
+  }
+  
+  button:hover {
+    background: #1558b0;
+    transform: translateY(-2px);
+  }
+  
+  input {
+    padding: 12px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  
+  input:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 5px rgba(26,115,232,0.5);
+    outline: none;
+  }
+  
+  a {
+    color: #1a73e8;
+    text-decoration: none;
+    transition: color 0.3s, text-decoration 0.3s;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+    color: #0d47a1;
+  }
+  
+  /* Custom scrollbar styling for exam sidebar */
+  #exam-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #1a73e8 #f0f2f5;
+  }
+  
+  #exam-sidebar::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  #exam-sidebar::-webkit-scrollbar-track {
+    background: #f0f2f5;
+    border-radius: 8px;
+  }
+  
+  #exam-sidebar::-webkit-scrollbar-thumb {
+    background: #1a73e8;
+    border-radius: 8px;
+  }
+  
+  /* Option container: label on left, input (hole) on right */
+  .option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+  }
+  
+  .option label {
+    flex: 1;
+    text-align: left;
+  }
+  
+  .option input {
+    margin-left: 16px;
+  }
+  
+  /* Disable animations on text elements inside the exam container */
+  #exam .question-text,
+  #exam .subject,
+  #exam .question-subject,
+  #exam p,
+  #exam span,
+  #exam h2,
+  #exam h3,
+  #exam h4 {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  
+  /* Additional interactive scaling on hover for non‑exam elements */
+  .interactive:hover {
+    transform: scale(1.03);
+    transition: transform 0.3s ease;
+  }
+  .result-section {
+    border: 2px solid #1a73e8;
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .result-section h2 {
+    text-align: center;
+    color: #1a73e8;
+    margin-bottom: 10px;
+  }
+  
+  .result-section p {
+    margin: 8px 0;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+  /* Global Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  color: #333;
+}
+
+nav {
+  background: #1a73e8;
+  padding: 10px 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+  padding: 40px;
+  margin: 60px auto;
+  max-width: 900px;
+}
+
+h2, h3 {
+  color: #1a73e8;
+  text-align: center;
+}
+
+button {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1558b0;
+}
+
+/* Results styling */
+.result-section {
+  border: 2px solid #1a73e8;
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.result-section h2 {
+  text-align: center;
+  color: #1a73e8;
+  margin-bottom: 10px;
+}
+
+.result-section p {
+  margin: 8px 0;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
