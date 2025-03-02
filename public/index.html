@@ -733,17 +733,7 @@
         document.getElementById(sectionId).style.display = "block";
       }
     }
-    document.getElementById("modelPapersTab").addEventListener("click", function(){
-  if(confirm("Are you sure you want to start the exam?")) {
-    // Load exam questions from your model papers array (sample shown below)
-    examQuestions = modelPapers[0].questions;
-    userAnswers = [];
-    currentQuestionIndex = 0;
-    showSection("exam");
-    renderQuestion(currentQuestionIndex);
-  }
-});
-
+    
     // -------------------------------
     // Exam Logic
     // -------------------------------
@@ -837,43 +827,7 @@
         }
       }, 1000);
     }
-    document.getElementById("submitBtn").addEventListener("click", function(){
-  examSubmitted = true;
-  var results = {
-    "Physics": [],
-    "Chemistry": [],
-    "Biology": []
-  };
-  
-  // Loop through all exam questions and group them by their 'section'
-  examQuestions.forEach(function(q, index) {
-    var subject = q.section;
-    if(results.hasOwnProperty(subject)) {
-      results[subject].push({
-        question: q.question,
-        userAnswer: userAnswers[index] || "No answer",
-        correctAnswer: q.answer
-      });
-    }
-  });
-  
-  // Build the results HTML
-  var resultHtml = "";
-  for (var subject in results) {
-    resultHtml += "<div class='result-section'><h2>" + subject + "</h2>";
-    results[subject].forEach(function(item, idx) {
-      resultHtml += "<p>Q" + (idx + 1) + ": " + item.question +
-                    "<br>Your answer: " + item.userAnswer +
-                    "<br>Correct answer: " + item.correctAnswer + "</p>";
-    });
-    resultHtml += "</div>";
-  }
-  
-  // Display the results
-  document.getElementById("result").innerHTML = resultHtml;
-  showSection("result");
-});
-
+    
     document.getElementById("submitBtn").addEventListener("click", function(){
       if (confirm("Are you sure you want to submit the exam?")) {
         submitExam();
@@ -1073,5 +1027,7 @@
     }
   
   </script>
+
+<script src="external.js"></script>
 </body>
 </html>
