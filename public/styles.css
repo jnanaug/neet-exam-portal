@@ -14,8 +14,11 @@
   
   nav {
     background: #1a73e8;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: background 0.3s, transform 0.3s;
+    padding: 10px 20px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   
   nav:hover {
@@ -41,11 +44,10 @@
   font-size: 0.95em;
   line-height: 1.4;
 }
-
   
   /* Main container styling with entrance animation (for non‑exam containers) */
   .container {
-    background: #ffffff;
+    background: #fff;
     border-radius: 12px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.15);
     padding: 40px;
@@ -88,13 +90,12 @@
     border: none;
     border-radius: 8px;
     padding: 10px 20px;
-    font-size: 1em;
-    transition: background 0.3s, transform 0.3s;
+    cursor: pointer;
+    transition: background 0.3s ease;
   }
   
   button:hover {
     background: #1558b0;
-    transform: translateY(-2px);
   }
   
   input {
@@ -264,4 +265,51 @@ button:hover {
   margin: 8px 0;
   font-size: 0.95em;
   line-height: 1.4;
+}
+
+/* Additional styles from index.html */
+#exam {
+  display: none;
+}
+
+.question-box {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin: 2px;
+  border: 1px solid #999;
+  text-align: center;
+  line-height: 20px;
+  font-size: 0.8em;
+  cursor: pointer;
+  background-color: #f0f0f0;
+}
+
+.question-box.active {
+  border: 2px solid blue;
+}
+
+.suggestions-container {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.suggestions-column {
+  flex: 1;
+  min-width: 200px;
+  margin: 10px;
+}
+
+.suggestions-column h3 {
+  margin-bottom: 10px;
+}
+
+.suggestions-column ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.suggestions-column li {
+  margin-bottom: 5px;
 }
