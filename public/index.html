@@ -151,6 +151,27 @@
     /* Password Strength Meter */
     #strengthMeter { width: 100%; height: 10px; background: #ddd; border-radius: 5px; margin-top: 5px; }
     #strengthBar { height: 100%; width: 0%; border-radius: 5px; transition: width 0.3s; }
+    .bookmark-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    /* Outline or gray for NOT bookmarked */
+    .bookmark-btn.not-bookmarked {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" stroke="%23000" fill="none" viewBox="0 0 24 24"><path d="M6 2v20l6-6 6 6V2z" stroke-width="2"/></svg>');
+    }
+    /* Solid black for bookmarked */
+    .bookmark-btn.bookmarked {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23000" viewBox="0 0 24 24"><path d="M6 2v20l6-6 6 6V2z"/></svg>');
+    }
   </style>
 </head>
 <body>
@@ -548,26 +569,90 @@
     var currentQuestionIndex = 0;
     var userAnswers = [];
     var selectedPaper = null;
+    var bookmarkedQuestions = [];
+    
+    function toggleOptionSelection() {
+      var options = document.getElementsByName("option");
+      options.forEach(option => {
+        option.addEventListener("click", function() {
+          if (this.checked) {
+            if (userAnswers[currentQuestionIndex] === this.value) {
+              this.checked = false;
+              userAnswers[currentQuestionIndex] = "";
+            } else {
+              userAnswers[currentQuestionIndex] = this.value;
+            }
+          }
+        });
+      });
+    }
     
     function showQuestion(index) {
       var container = document.getElementById("question-container");
       var q = examQuestions[index];
-      container.innerHTML = "<div class='question-number'>Question " + (index + 1) + " of " + examQuestions.length + "</div>" +
-                            "<h3>" + q.section + "</h3>" +
-                            "<p class='question-text'>" + q.question + "</p>";
-      container.innerHTML += "<form id='optionForm'>";
+
+      // Check bookmark status
+      var isBookmarked = bookmarkedQuestions.includes(index);
+      // Choose the appropriate CSS class
+      var bookmarkClass = isBookmarked ? "bookmark-btn bookmarked" : "bookmark-btn not-bookmarked";
+
+      container.innerHTML = `
+        <div style="position: relative;">
+          <div class="question-number">Question ${index + 1} of ${examQuestions.length}</div>
+          <button class="${bookmarkClass}" onclick="toggleBookmark(${index})"></button>
+        </div>
+        <h3>${q.section}</h3>
+        <p class="question-text">${q.question}</p>
+        <form id="optionForm">
+      `;
+      
       q.options.forEach(function(option, i) {
         var checked = (userAnswers[index] !== undefined && userAnswers[index].trim() !== "" && userAnswers[index] === option) ? "checked" : "";
-        container.innerHTML += "<div class='option'><input type='radio' name='option' id='opt" + i + "' value='" + option + "' " + checked + ">" +
-                               "<label for='opt" + i + "'>" + option + "</label></div>";
+        container.innerHTML += `<div class='option'><input type='radio' name='option' id='opt${i}' value='${option}' ${checked}>
+                                <label for='opt${i}'>${option}</label></div>`;
       });
       container.innerHTML += "</form>";
       document.getElementById("prevBtn").style.display = (index === 0) ? "none" : "inline";
       document.getElementById("nextBtn").style.display = (index === examQuestions.length - 1) ? "none" : "inline";
-      updateSidebar();
+
+      // Add tiny boxes for unanswered, answered, and reviewed questions
+      var answeredCount = userAnswers.filter(answer => answer && answer.trim() !== "").length;
+      var reviewedCount = bookmarkedQuestions.length;
+      var unansweredCount = userAnswers.filter((answer, i) => answer === "" && !bookmarkedQuestions.includes(i)).length;
+
+      container.innerHTML += `
+        <div style="position: absolute; top: 10px; left: 10px;">
+          <div style="display: flex; flex-direction: column; align-items: flex-start;">
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+              <div style="width: 20px; height: 20px; background-color: green; color: white; text-align: center; line-height: 20px; border-radius: 3px; font-size: 0.7em;">${answeredCount}</div>
+              <span style="margin-left: 5px; font-size: 0.7em;">Answered</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+              <div style="width: 20px; height: 20px; background-color: red; color: white; text-align: center; line-height: 20px; border-radius: 3px; font-size: 0.7em;">${unansweredCount}</div>
+              <span style="margin-left: 5px; font-size: 0.7em;">Unanswered</span>
+            </div>
+            <div style="display: flex; align-items: center;">
+              <div style="width: 20px; height: 20px; background-color: yellow; color: black; text-align: center; line-height: 20px; border-radius: 3px; font-size: 0.7em;">${reviewedCount}</div>
+              <span style="margin-left: 5px; font-size: 0.7em;">Reviewed</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Ensure toggleOptionSelection is called after the options are rendered
+      toggleOptionSelection();
     }
     
-    // Modified saveAnswer: if no option is selected, mark as skipped (empty string)
+    function toggleBookmark(index) {
+      if (bookmarkedQuestions.includes(index)) {
+        bookmarkedQuestions = bookmarkedQuestions.filter(i => i !== index);
+      } else {
+        bookmarkedQuestions.push(index);
+      }
+      // Re-render the question to update the bookmark icon
+      showQuestion(index);
+    }
+    
     function saveAnswer() {
       var options = document.getElementsByName("option");
       var answered = false;
@@ -580,7 +665,6 @@
       if (!answered) {
         userAnswers[currentQuestionIndex] = "";
       }
-      updateSidebar();
     }
     
     document.getElementById("nextBtn").addEventListener("click", function(){
@@ -588,6 +672,7 @@
       if (currentQuestionIndex < examQuestions.length - 1) {
         currentQuestionIndex++;
         showQuestion(currentQuestionIndex);
+        updateSidebar();
       }
     });
     
@@ -596,14 +681,17 @@
       if (currentQuestionIndex > 0) {
         currentQuestionIndex--;
         showQuestion(currentQuestionIndex);
+        updateSidebar();
       }
     });
     
     function startExam() {
       currentQuestionIndex = 0;
-      userAnswers = [];
+      userAnswers = new Array(examQuestions.length); // Initialize with undefined values
       examSubmitted = false;
+      bookmarkedQuestions = [];
       subjectGroups = {};
+      
       examQuestions.forEach(function(q, index) {
         var subject = q.section;
         if (!subjectGroups[subject]) {
@@ -611,6 +699,7 @@
         }
         subjectGroups[subject].push(index);
       });
+      
       showQuestion(currentQuestionIndex);
       updateSidebar();
       startTimer();
@@ -641,15 +730,15 @@
       }
     });
     
-    function submitExam(){
+    function submitExam() {
       saveAnswer();
       clearInterval(timerInterval);
       examSubmitted = true;
-      updateSidebar();
+
       var score = 0;
       var mistakes = {};
       var resultHTML = "<h2>Exam Results</h2>";
-      
+
       // Initialize section-wise results
       var sectionResults = {
         Physics: [],
@@ -657,21 +746,16 @@
         Biology: []
       };
 
-      // Modified candidateAnswer logic: treat undefined as empty string so not-opened questions are 'unanswered'
+      // Calculate the score and mistakes
       for (var i = 0; i < examQuestions.length; i++) {
         var q = examQuestions[i];
         var candidateAnswer = (userAnswers[i] === undefined) ? "" : userAnswers[i];
         var correctAnswer = q.answer;
-        var questionResult = "";
         if (candidateAnswer === correctAnswer) {
           score += 4; // Correct answer adds 4 marks
-          questionResult = "<span class='correct'>Correct</span>";
         } else {
-          if (candidateAnswer === "") {
-            questionResult = "<span class='unanswered'>Unanswered</span>";
-          } else {
+          if (candidateAnswer !== "") {
             score -= 1; // Wrong answer subtracts 1 mark
-            questionResult = "<span class='wrong'>Wrong</span>";
           }
           // Record mistake with topic, count and subject (from q.section)
           if (mistakes[q.topic]) {
@@ -680,20 +764,19 @@
             mistakes[q.topic] = { subject: q.section, count: 1 };
           }
         }
-        
-        // Ensure the section exists in sectionResults
+
+        // Add question result to the appropriate section
         if (!sectionResults[q.section]) {
           sectionResults[q.section] = [];
         }
-        
-        // Add question result to the appropriate section
         sectionResults[q.section].push({
           question: q.question,
           candidateAnswer: candidateAnswer,
-          correctAnswer: correctAnswer,
-          result: questionResult
+          correctAnswer: correctAnswer
         });
       }
+
+      resultHTML += "<h3>Your Total Score: " + score + " out of " + (examQuestions.length * 4) + "</h3>";
 
       // Add buttons for each section
       resultHTML += `
@@ -705,12 +788,10 @@
         <div id="sectionResults"></div>
       `;
 
-      resultHTML += "<h3>Your Total Score: " + score + " out of " + (examQuestions.length * 4) + "</h3>";
-      
       var userEmail = localStorage.getItem("loggedInUser");
       db.collection("users").doc(userEmail).update({
         papers: firebase.firestore.FieldValue.arrayUnion({
-          paperId: selectedPaper.paperId, // Use the selected paper ID
+          paperId: selectedPaper.paperId,
           score: score,
           total: examQuestions.length * 4,
           mistakes: mistakes,
@@ -721,7 +802,7 @@
         showSection("result");
         document.getElementById("result").innerHTML = resultHTML;
         updatePapersTable();
-        updatePerformanceAnalysis(); // Ensure the chart is updated
+        updatePerformanceAnalysis();
       }).catch(function(error) {
         alert("Error saving exam result: " + error.message);
       });
@@ -729,15 +810,40 @@
       // Function to show results for a specific section
       window.showSectionResults = function(section) {
         var sectionHTML = "<h3>" + section + " Results</h3>";
+        var correctCount = 0;
+        var incorrectCount = 0;
+        var unansweredCount = 0;
+
         sectionResults[section].forEach(function(res, index) {
+          if (res.candidateAnswer === res.correctAnswer) {
+            correctCount++;
+          } else if (res.candidateAnswer === "") {
+            unansweredCount++;
+          } else {
+            incorrectCount++;
+          }
+
+          var answerColor = res.candidateAnswer === "" ? "gray" : (res.candidateAnswer === res.correctAnswer ? "green" : "red");
+
           sectionHTML += "<div class='result-question'>";
           sectionHTML += "<div class='question-number'>Question " + (index + 1) + ":</div>";
           sectionHTML += "<div class='question-text'>" + res.question + "</div>";
-          sectionHTML += "<div class='candidate-answer'><strong>Your Answer:</strong> " + (res.candidateAnswer === "" ? "No answer" : res.candidateAnswer) + "</div>";
+          sectionHTML += "<div class='candidate-answer'><strong>Your Answer:</strong> <span style='color: " + answerColor + ";'>" + (res.candidateAnswer === "" ? "No answer" : res.candidateAnswer) + "</span></div>";
           sectionHTML += "<div class='correct-answer'><strong>Correct Answer:</strong> " + res.correctAnswer + "</div>";
-          sectionHTML += "<div class='question-result'><strong>Result:</strong> " + res.result + "</div>";
           sectionHTML += "</div><hr>";
         });
+
+        // Add correct, incorrect, and unanswered counts as tiny boxes
+        sectionHTML = `
+          <div style="position: relative;">
+            <div style="position: absolute; top: 10px; right: 10px;">
+              <div style="display: inline-block; width: 20px; height: 20px; background-color: green; color: white; text-align: center; line-height: 20px; border-radius: 3px;">${correctCount}</div>
+              <div style="display: inline-block; width: 20px; height: 20px; background-color: red; color: white; text-align: center; line-height: 20px; border-radius: 3px; margin-left: 5px;">${incorrectCount}</div>
+              <div style="display: inline-block; width: 20px; height: 20px; background-color: gray; color: white; text-align: center; line-height: 20px; border-radius: 3px; margin-left: 5px;">${unansweredCount}</div>
+            </div>
+          </div>
+        ` + sectionHTML;
+
         document.getElementById("sectionResults").innerHTML = sectionHTML;
       };
     }
@@ -756,14 +862,14 @@
         indices.forEach(function(qIndex, i) {
           var box = document.createElement("div");
           box.className = "question-box";
-          // Highlight active question box
           if (parseInt(qIndex) === currentQuestionIndex) {
             box.classList.add("active");
           }
           box.innerText = (i + 1);
           box.dataset.qIndex = qIndex;
-          // If the question has been visited:
-          if (userAnswers[qIndex] !== undefined) {
+          if (bookmarkedQuestions.includes(qIndex)) {
+            box.style.backgroundColor = "yellow"; // yellow for bookmarked
+          } else if (userAnswers[qIndex] !== undefined) {
             if (userAnswers[qIndex].trim() !== "") {
               box.style.backgroundColor = "#90EE90"; // light green for answered
             } else {
